@@ -1,0 +1,35 @@
+<section class="about-section">
+    <div class="container">
+      <h2 class="section-title" [@fadeInUp]>About Me</h2>
+      
+      <div class="about-content" [@fadeInUp]>
+        <p class="about-text">
+          I'm a passionate web developer with expertise in modern web technologies. With a
+          keen eye for detail and a love for clean, efficient code, I specialize in creating robust
+          web applications that solve real-world problems.
+        </p>
+  
+        <p class="about-text">
+          My journey in web development has led me to work on a variety of projects, from
+          complex enterprise systems to user-friendly e-commerce platforms. I'm always eager
+          to learn new technologies and take on challenging projects that push the boundaries
+          of what's possible on the web.
+        </p>
+  
+        <button mat-flat-button class="download-btn" (click)="downloadResume()">
+          Download Resume
+        </button>
+      </div>
+  
+      <div class="skills-section" [@fadeInUp]>
+        <h2 class="skills-title">My skills</h2>
+        <div class="skills-grid">
+          <div class="skill-item" *ngFor="let skill of skills">
+            <img [src]="skill.logo" [alt]="skill.name + ' logo'" class="skill-logo">
+            <span class="skill-name">{{skill.name}}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <app-footer></app-footer>

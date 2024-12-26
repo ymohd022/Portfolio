@@ -1,0 +1,11 @@
+<mat-toolbar class="navbar" [class.scrolled]="isScrolled" [@fadeInOut]>
+    <div class="container">
+      <a routerLink="/" class="brand">Mohd Yousuf</a>
+      <div class="nav-links">
+        <a mat-button routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}">HOME</a>
+        <a mat-button routerLink="/portfolio" routerLinkActive="active">PORTFOLIO</a>
+        <a mat-button routerLink="/about" routerLinkActive="active">ABOUT</a>
+        <a mat-button routerLink="/contact" routerLinkActive="active">CONTACT</a>
+      </div>
+    </div>
+  </mat-toolbar>

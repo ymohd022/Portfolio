@@ -1,0 +1,75 @@
+.hero {
+    height: 100vh;
+    background-color: black;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    position: relative;
+  
+    .container {
+      padding: 0 2rem;
+    }
+  
+    .hero-content {
+      color: white;
+      max-width: 800px;
+  
+      h1 {
+        font-size: 4rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
+        line-height: 1.2;
+      }
+  
+      .subtitle {
+        font-size: 1.5rem;
+        opacity: 0.7;
+        margin-bottom: 2rem;
+      }
+  
+      .resume-btn {
+        color: white;
+        border-color: white;
+        padding: 0.5rem 2rem;
+        font-size: 1rem;
+        letter-spacing: 1px;
+        
+        &:hover {
+          background-color: rgba(255, 255, 255, 0.1);
+        }
+      }
+    }
+  
+    .scroll-indicator {
+      position: absolute;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%);
+      color: white;
+      text-align: center;
+      opacity: 0.7;
+  
+      span {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+        letter-spacing: 2px;
+      }
+  
+      mat-icon {
+        animation: bounce 2s infinite;
+      }
+    }
+  }
+  
+  @keyframes bounce {
+    0%, 20%, 50%, 80%, 100% {
+      transform: translateY(0);
+    }
+    40% {
+      transform: translateY(-10px);
+    }
+    60% {
+      transform: translateY(-5px);
+    }
+  }

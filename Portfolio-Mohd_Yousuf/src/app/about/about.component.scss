@@ -1,0 +1,155 @@
+.about-section {
+    background-color: black;
+    min-height: 100vh;
+    width: 100%;
+    overflow-y: auto;
+    padding: 80px 0; // Added padding to account for fixed navbar
+  
+    .container {
+      width: 100%;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 15px;
+    }
+  
+    .section-title {
+      color: white;
+      font-size: 2.5rem;
+      font-weight: 300;
+      margin-bottom: 60px;
+      position: relative;
+      
+      &::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        bottom: -10px;
+        width: 40px;
+        height: 2px;
+        background-color: white;
+      }
+    }
+  
+    .about-content {
+      max-width: 800px;
+      margin-bottom: 80px; // Added spacing between about and skills
+  
+      .about-text {
+        color: white;
+        font-size: 1.1rem;
+        line-height: 1.8;
+        margin-bottom: 30px;
+        opacity: 0.9;
+        font-weight: 300;
+      }
+  
+      .download-btn {
+        background-color: rgba(255, 255, 255, 0.1);
+        color: white;
+        border: 1px solid white;
+        padding: 12px 24px;
+        font-size: 1rem;
+        letter-spacing: 0.5px;
+        margin-top: 20px;
+        transition: all 0.3s ease;
+  
+        &:hover {
+          background-color: white;
+          color: black;
+        }
+      }
+    }
+  
+    .skills-section {
+      margin-top: 100px;
+      
+      .skills-title {
+        color: white;
+        font-size: 3rem;
+        font-weight: 500;
+        text-align: center;
+        margin-bottom: 60px;
+      }
+  
+      .skills-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 40px;
+        max-width: 800px;
+        margin: 0 auto;
+  
+        .skill-item {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 15px;
+  
+          .skill-logo {
+            width: 80px;
+            height: 80px;
+            object-fit: contain;
+            transition: transform 0.3s ease;
+  
+            &:hover {
+              transform: translateY(-5px);
+            }
+          }
+  
+          .skill-name {
+            color: white;
+            font-size: 1rem;
+            font-weight: 300;
+          }
+        }
+      }
+    }
+  }
+  
+  // Add these styles to enable smooth scrolling
+  html {
+    scroll-behavior: smooth;
+  }
+  
+  body {
+    overflow-y: auto;
+  }
+  
+  @media (max-width: 768px) {
+    .about-section {
+      padding: 60px 0;
+  
+      .section-title {
+        font-size: 2rem;
+        margin-bottom: 40px;
+      }
+  
+      .about-content {
+        margin-bottom: 60px;
+  
+        .about-text {
+          font-size: 1rem;
+        }
+      }
+  
+      .skills-section {
+        margin-top: 60px;
+  
+        .skills-title {
+          font-size: 2rem;
+          margin-bottom: 40px;
+        }
+  
+        .skills-grid {
+          grid-template-columns: repeat(2, 1fr);
+          gap: 30px;
+          
+          .skill-item {
+            .skill-logo {
+              width: 60px;
+              height: 60px;
+            }
+          }
+        }
+      }
+    }
+  }
