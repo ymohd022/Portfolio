@@ -1,14 +1,17 @@
 <div class="hero">
-    <div class="container">
-      <div class="hero-content" [@fadeInUp]>
-        <h1>I am Mohd Yousuf</h1>
-        <p class="subtitle">Web Developer</p>
-        <button mat-stroked-button class="resume-btn">View Resume</button>
-      </div>
-    </div>
-    <div class="scroll-indicator" [@fadeInUp]>
-      <span>PORTFOLIO</span>
-      <mat-icon>keyboard_arrow_down</mat-icon>
+  <div class="container">
+    <div class="hero-content" [@fadeInUp]>
+      <h1>I am Mohd Yousuf</h1>
+      <p class="subtitle">Web Developer</p>
+      <button mat-stroked-button class="resume-btn" (click)="openResume()">View Resume</button>
     </div>
   </div>
-  <app-footer></app-footer>
+  <div class="scroll-indicator" [@fadeInUp]>
+    <span>PORTFOLIO</span>
+    <mat-icon>keyboard_arrow_down</mat-icon>
+  </div>
+</div>
+<app-portfolio></app-portfolio>
+<app-about></app-about>
+<app-contact></app-contact>
+

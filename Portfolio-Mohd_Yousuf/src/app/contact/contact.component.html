@@ -2,7 +2,7 @@
     <div class="container">
       <h2 class="section-title" [@fadeInUp]>Contact Me</h2>
       
-      <form  class="contact-form" [@fadeInUp]>
+      <form [formGroup]="contactForm" (ngSubmit)="onSubmit()" class="contact-form" [@fadeInUp]>
         <div class="form-group">
           <input 
             type="text" 
@@ -40,4 +40,4 @@
       </form>
     </div>
   </section>
-  <app-footer></app-footer>
+ 

@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { trigger, state, style, transition, animate } from '@angular/animations';
+import { EmailService } from '../services/email.service';
 
 @Component({
   selector: 'app-contact',
@@ -19,11 +20,13 @@ import { trigger, state, style, transition, animate } from '@angular/animations'
   ]
 })
 export class ContactComponent implements OnInit {
-
   contactForm: FormGroup;
   isSubmitting = false;
 
-  constructor(private fb: FormBuilder) {
+  constructor(
+    private fb: FormBuilder,
+    private emailService: EmailService
+  ) {
     this.contactForm = this.fb.group({
       name: ['', [Validators.required]],
       email: ['', [Validators.required, Validators.email]],
@@ -32,4 +35,20 @@ export class ContactComponent implements OnInit {
   }
 
   ngOnInit(): void {}
+
+  async onSubmit() {
+    if (this.contactForm.valid) {
+      this.isSubmitting = true;
+      try {
+        await this.emailService.sendEmail(this.contactForm.value).toPromise();
+        this.contactForm.reset();
+        alert('Message sent successfully!');
+      } catch (error) {
+        alert('Failed to send message. Please try again.');
+        console.error('Error sending email:', error);
+      } finally {
+        this.isSubmitting = false;
+      }
+    }
+  }
 }

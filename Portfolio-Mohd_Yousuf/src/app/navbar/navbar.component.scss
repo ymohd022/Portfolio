@@ -11,7 +11,12 @@
     &.scrolled {
       background-color: rgba(0, 0, 0, 0.95);
     }
-  
+    .nav-links a.active {
+      color: #f5f6f8;
+      font-weight: bold;
+      border-bottom: 2px solid #f1f2f3;
+      transition: all 0.3s ease-in-out;
+  }
     .container {
       display: flex;
       justify-content: space-between;

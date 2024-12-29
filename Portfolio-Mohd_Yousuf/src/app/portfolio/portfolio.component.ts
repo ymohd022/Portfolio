@@ -7,12 +7,13 @@ interface Project {
   description: string;
   image: string;
   link: string;
+  github: string; // Add github link property
 }
 
 @Component({
   selector: 'app-portfolio',
   templateUrl: './portfolio.component.html',
-  styleUrl: './portfolio.component.scss',
+  styleUrls: ['./portfolio.component.scss'],
   animations: [
     trigger('fadeInUp', [
       state('void', style({
@@ -32,21 +33,24 @@ export class PortfolioComponent implements OnInit {
       title: 'SDHUB Management Portal',
       description: 'Delivering Job Oriented Training Programs',
       image: 'SDHUB.jpg',
-      link: '#'
+      link: '#',
+      github: 'https://github.com/Skill-Development-Hub/Mohd_yousuf'
     },
     {
       id: 2,
       title: 'Luminate Web Solutions',
       description: 'Professional Web Development Services',
       image: 'lws.jpg',
-      link: 'https://luminatewebsol.com/'
+      link: 'https://luminatewebsol.com/',
+      github: 'https://github.com/shahriarhus/Luminate-solutions'
     },
     {
       id: 3,
       title: 'Mini E-commerce Store',
       description: 'Modern E-commerce Platform',
       image: '/assets/images/ecommerce-project.jpg',
-      link: '#'
+      link: '#',
+      github: 'https://github.com/yourusername/mini-ecommerce'
     }
   ];
 

@@ -1,5 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { trigger, state, style, transition, animate } from '@angular/animations';
+import { MatDialog } from '@angular/material/dialog';
+import { ResumeComponent } from '../resume/resume.component';
 
 @Component({
   selector: 'app-hero',
@@ -18,7 +20,16 @@ import { trigger, state, style, transition, animate } from '@angular/animations'
   ]
 })
 export class HeroComponent implements OnInit {
-  constructor() { }
+  constructor(private dialog: MatDialog) {}
 
-  ngOnInit(): void { }
+  ngOnInit(): void {}
+
+  openResume(): void {
+    this.dialog.open(ResumeComponent, {
+      width: '90%',
+      maxWidth: '800px',
+      panelClass: 'resume-modal-container',
+      autoFocus: false
+    });
+  }
 }

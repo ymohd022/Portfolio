@@ -109,6 +109,32 @@
       }
     }
   }
+  .button-group {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-top: 20px;
+
+    a {
+      color: white;
+      border: 1px solid white;
+      padding: 8px 24px;
+      transition: all 0.3s ease;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+
+      i {
+        font-size: 1.1rem;
+      }
+
+      &:hover {
+        background: white;
+        color: black;
+      }
+    }
+  }
   
   @media (max-width: 768px) {
     .portfolio-section {
@@ -117,6 +143,11 @@
       .section-title {
         font-size: 2rem;
         margin-bottom: 40px;
+      }
+
+      .button-group {
+        flex-direction: column;
+        gap: 0.5rem !important;
       }
   
       .projects-grid {
