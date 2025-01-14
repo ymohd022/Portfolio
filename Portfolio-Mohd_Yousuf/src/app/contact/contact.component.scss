@@ -1,104 +1,172 @@
 .contact-section {
-    background-color: black;
-    min-height: 100vh;
-    padding: 100px 0;
-    display: flex;
-    align-items: center;
-  
-    .container {
+  background-color: black;
+  min-height: 100vh;
+  padding: 100px 0;
+  display: flex;
+  align-items: center;
+
+  .container {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 15px;
+  }
+
+  .section-title {
+    color: white;
+    font-size: 3rem;
+    font-weight: 600;
+    margin-bottom: 60px;
+    position: relative;
+    
+    &::before {
+      content: 'CONTACT';
+      position: absolute;
+      top: -20px;
+      left: -10px;
+      font-size: 6rem;
+      color: rgba(255, 255, 255, 0.05);
+      z-index: -1;
+    }
+
+    .title-line {
+      position: absolute;
+      bottom: -10px;
+      left: 0;
       width: 100%;
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 0 15px;
+      height: 2px;
+      background: linear-gradient(90deg, white 0%, rgba(255,255,255,0) 100%);
+      transform-origin: left;
+      animation: lineGrow 1s ease-out forwards;
     }
-  
-    .section-title {
-      color: white;
-      font-size: 2.5rem;
-      font-weight: 300;
-      margin-bottom: 60px;
-      position: relative;
-      
-      &::after {
-        content: '';
-        position: absolute;
-        left: 0;
-        bottom: -10px;
-        width: 40px;
-        height: 2px;
-        background-color: white;
-      }
-    }
-  
-    .contact-form {
-      max-width: 600px;
-      margin: 0 auto;
-  
-      .form-group {
-        margin-bottom: 20px;
-  
-        input,
-        textarea {
-          width: 100%;
-          padding: 12px;
-          background-color: #1a1a1a;
-          border: 1px solid #333;
-          color: white;
-          font-size: 1rem;
-          transition: all 0.3s ease;
-          border-radius: 4px;
-  
-          &::placeholder {
-            color: #666;
-          }
-  
-          &:focus {
-            outline: none;
-            border-color: #666;
-          }
-  
-          &.invalid {
-            border-color: #ff4444;
-          }
-        }
-  
-        textarea {
-          resize: vertical;
-          min-height: 120px;
-        }
-      }
-  
-      .submit-btn {
+  }
+
+  .contact-form {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 20px;
+
+    // Material Form Field Customization
+    ::ng-deep {
+      .mat-mdc-form-field {
         width: 100%;
-        padding: 12px;
-        background-color: transparent;
-        border: 1px solid white;
+        margin-bottom: 20px;
+      }
+
+      // Input styling
+      .mat-mdc-text-field-wrapper {
+        background-color: transparent !important;
+      }
+
+      // Label styling
+      .mdc-floating-label, .mat-mdc-floating-label {
+        color: rgba(255, 255, 255, 0.7) !important;
+      }
+
+      // Input text color
+      .mdc-text-field--outlined {
+        --mdc-theme-primary: white;
+        --mdc-theme-text-primary-on-background: white;
+      }
+
+      // Outline color
+      .mdc-notched-outline__leading,
+      .mdc-notched-outline__notch,
+      .mdc-notched-outline__trailing {
+        border-color: rgba(255, 255, 255, 0.3) !important;
+      }
+
+      // Focused outline
+      .mdc-text-field--focused .mdc-notched-outline__leading,
+      .mdc-text-field--focused .mdc-notched-outline__notch,
+      .mdc-text-field--focused .mdc-notched-outline__trailing {
+        border-color: white !important;
+      }
+
+      // Input text
+      .mdc-text-field {
         color: white;
-        font-size: 1rem;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        border-radius: 4px;
-  
-        &:hover:not(:disabled) {
-          background-color: white;
-          color: black;
-        }
-  
-        &:disabled {
-          opacity: 0.6;
-          cursor: not-allowed;
+      }
+
+      input.mat-mdc-input-element,
+      textarea.mat-mdc-input-element {
+        color: white;
+      }
+
+      // Error styling
+      .mat-mdc-form-field-error {
+        color: #ff4444;
+      }
+    }
+
+    // Submit button styling
+    .submit-btn {
+      width: 100%;
+      padding: 1rem;
+      font-size: 1rem;
+      background-color: transparent;
+      color: white;
+      border: 2px solid white;
+      border-radius: 4px;
+      transition: all 0.3s ease;
+      margin-top: 20px;
+
+      &:hover:not(:disabled) {
+        background-color: white;
+        color: black;
+      }
+
+      &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      mat-spinner {
+        display: inline-block;
+        margin-right: 8px;
+        
+        ::ng-deep circle {
+          stroke: white;
         }
       }
     }
   }
-  
-  @media (max-width: 768px) {
-    .contact-section {
-      padding: 60px 0;
-  
-      .section-title {
-        font-size: 2rem;
-        margin-bottom: 40px;
+}
+
+// Snackbar custom styles
+::ng-deep {
+  .success-snackbar {
+    background: #4caf50;
+    color: white;
+  }
+
+  .error-snackbar {
+    background: #f44336;
+    color: white;
+  }
+}
+
+
+@keyframes lineGrow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@media (max-width: 768px) {
+  .contact-section {
+    padding: 60px 0;
+
+    .section-title {
+      font-size: 2.5rem;
+      
+      &::before {
+        font-size: 4rem;
       }
     }
   }
+}
+

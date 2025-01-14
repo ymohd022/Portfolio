@@ -7,6 +7,10 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { provideHttpClient } from '@angular/common/http';
 import { MatDialogModule } from '@angular/material/dialog';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatInputModule } from '@angular/material/input';
 
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
@@ -19,6 +23,7 @@ import { ContactComponent } from './contact/contact.component';
 import { FooterComponent } from './footer/footer.component';
 import { ReactiveFormsModule } from '@angular/forms';
 import { ResumeComponent } from './resume/resume.component';
+import { AnimatedLinesBackgroundComponent } from './animated-lines-background.component';
 
 @NgModule({
   declarations: [
@@ -29,7 +34,8 @@ import { ResumeComponent } from './resume/resume.component';
     AboutComponent,
     ContactComponent,
     FooterComponent,
-    ResumeComponent
+    ResumeComponent,
+    AnimatedLinesBackgroundComponent
   ],
   imports: [
     BrowserModule,
@@ -40,7 +46,11 @@ import { ResumeComponent } from './resume/resume.component';
     BrowserAnimationsModule,
     MatIconModule,
     ReactiveFormsModule,
-    MatDialogModule
+    MatDialogModule,
+    MatFormFieldModule,
+    MatProgressSpinnerModule,
+    MatSnackBarModule,
+    MatInputModule
   ],
   providers: [
     provideClientHydration(),

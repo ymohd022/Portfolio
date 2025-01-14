@@ -1,12 +1,26 @@
 <div class="hero">
+  <app-animated-lines-background></app-animated-lines-background>
   <div class="container">
     <div class="hero-content" [@fadeInUp]>
-      <h1>I am Mohd Yousuf</h1>
-      <p class="subtitle">Web Developer</p>
-      <button mat-stroked-button class="resume-btn" (click)="openResume()">View Resume</button>
+      <h1 class="typing-container" [@typing]="isTypingComplete">
+        I am Mohd Yousuf
+      </h1>
+      <p class="subtitle" [@fadeInUp] *ngIf="showSubtitle">
+        Web Developer
+      </p>
+      <button 
+        mat-stroked-button 
+        class="resume-btn" 
+        (click)="openResume()"
+        [@fadeInUp]
+        *ngIf="showButton"
+        [class.pulse]="showButton"
+      >
+        View Resume
+      </button>
     </div>
   </div>
-  <div class="scroll-indicator" [@fadeInUp]>
+  <div class="scroll-indicator" [@fadeInUp] (click)="scrollToPortfolio()">
     <span>PORTFOLIO</span>
     <mat-icon>keyboard_arrow_down</mat-icon>
   </div>

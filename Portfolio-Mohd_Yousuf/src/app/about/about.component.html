@@ -1,34 +1,57 @@
 <section class="about-section">
-    <div class="container">
-      <h2 class="section-title" [@fadeInUp]>About Me</h2>
-      
-      <div class="about-content" [@fadeInUp]>
-        <p class="about-text">
-          I'm a passionate web developer with expertise in modern web technologies. With a
-          keen eye for detail and a love for clean, efficient code, I specialize in creating robust
-          web applications that solve real-world problems.
-        </p>
-  
-        <p class="about-text">
-          My journey in web development has led me to work on a variety of projects, from
-          complex enterprise systems to user-friendly e-commerce platforms. I'm always eager
-          to learn new technologies and take on challenging projects that push the boundaries
-          of what's possible on the web.
-        </p>
-  
-        <button mat-flat-button class="download-btn" (click)="downloadResume()">
-          Download Resume
-        </button>
-      </div>
-  
-      <div class="skills-section" [@fadeInUp]>
-        <h2 class="skills-title">My skills</h2>
-        <div class="skills-grid">
-          <div class="skill-item" *ngFor="let skill of skills">
+  <div class="container">
+    <h2 class="section-title" [@fadeInUp]>
+      <span class="title-text">About Me</span>
+      <div class="title-line"></div>
+    </h2>
+    
+    <div class="about-content" [@textReveal]>
+      <p class="about-text reveal-text">
+        I'm a passionate web developer with expertise in modern web technologies. With a
+        keen eye for detail and a love for clean, efficient code, I specialize in creating robust
+        web applications that solve real-world problems.
+      </p>
+
+      <p class="about-text reveal-text">
+        My journey in web development has led me to work on a variety of projects, from
+        complex enterprise systems to user-friendly e-commerce platforms. I'm always eager
+        to learn new technologies and take on challenging projects that push the boundaries
+        of what's possible on the web.
+      </p>
+
+      <button 
+        mat-flat-button 
+        class="download-btn" 
+        (click)="downloadResume()"
+        (mouseenter)="setResumeHovered(true)"
+        (mouseleave)="setResumeHovered(false)"
+        [class.hovered]="isResumeHovered"
+      >
+        <span class="btn-content">
+          <span class="btn-text">Download Resume</span>
+          <span class="btn-icon">↓</span>
+        </span>
+        <span class="btn-background"></span>
+      </button>
+    </div>
+
+    <div class="skills-section animate-on-scroll" [@staggerFade]="skills.length">
+      <h2 class="skills-title">My Skills</h2>
+      <div class="skills-grid">
+        <div 
+          class="skill-item" 
+          *ngFor="let skill of skills"
+          (mouseenter)="setHoveredSkill(skill.name)"
+          (mouseleave)="setHoveredSkill(null)"
+          [class.hovered]="hoveredSkill === skill.name"
+        >
+          <div class="skill-card">
             <img [src]="skill.logo" [alt]="skill.name + ' logo'" class="skill-logo">
             <span class="skill-name">{{skill.name}}</span>
           </div>
         </div>
       </div>
     </div>
-  </section>
+  </div>
+</section>
+
