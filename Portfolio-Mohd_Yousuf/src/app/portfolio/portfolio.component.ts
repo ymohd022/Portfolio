@@ -55,8 +55,8 @@ export class PortfolioComponent implements OnInit, AfterViewInit {
       id: 1,
       title: 'SDHUB Management Portal',
       description: 'Delivering Job Oriented Training Programs',
-      image: 'SDHUB.jpg',
-      link: '#',
+      image: 'sdhubm.png',
+      link: 'https://sdhub.luminatewebsol.com/',
       github: 'https://github.com/Skill-Development-Hub/Mohd_yousuf',
     },
     {
@@ -71,10 +71,34 @@ export class PortfolioComponent implements OnInit, AfterViewInit {
       id: 3,
       title: 'Mini E-commerce Store',
       description: 'Modern E-commerce Platform',
-      image: 'e-commerce.png',
-      link: '#',
-      github: 'https://github.com/yourusername/mini-ecommerce',
-    }
+      image: 'shopsphere.png',
+      link: 'https://hopsphere.netlify.app/',
+      github: 'https://github.com/ymohd022/Mini-E-commerce-Store.git',
+    },
+    {
+      id: 4,
+      title: 'XLNC Contracting',
+      description: 'XLNC Contracting is a leading construction company',
+      image: 'xlnc.png',
+      link: 'https://xlnccontracting.com/',
+      github: 'https://github.com/ymohd022/XLNC-contracting.git',
+    },
+    {
+      id: 5,
+      title: 'Eiddo Power',
+      description: 'Innovative Energy Solutions',
+      image: 'eiddo power.png',
+      link: 'https://eiddopower.com/',
+      github: 'https://github.com/ymohd022/Eiddo-Power.git',
+    },
+    {
+      id: 6,
+      title: 'Aseem India',
+      description: 'Empowering India\'s Youth',
+      image: 'aseem.png',
+      link: 'https://aseemindia.org/',
+      github: 'https://github.com/Luminate-Web-Solutions/AseemIndia.git',
+    },
   ];
 
   hoveredIndex: number = -1;
