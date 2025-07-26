@@ -1,11 +1,11 @@
-# Build Angular app
-FROM node:18-alpine AS build
+# Stage 1: Build Angular app
+FROM node:18 AS builder
 WORKDIR /app
 COPY . .
 RUN npm install
-RUN npm run build --prod
+RUN npm run build
 
-# Serve the app with nginx
+# Stage 2: Serve with Nginx
 FROM nginx:alpine
-COPY --from=build /app/dist/* /usr/share/nginx/html
+COPY --from=builder /app/dist/portfolio-mohd-yousuf/browser /usr/share/nginx/html
 EXPOSE 80
