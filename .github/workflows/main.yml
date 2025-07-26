@@ -36,7 +36,7 @@ jobs:
         username: ${{ secrets.EC2_USER }}
         key: ${{ secrets.EC2_KEY }}
         script: |
-          kubectl apply -f ~/Portfolio/k8s/frontend-deployment.yaml
-          kubectl apply -f ~/Portfolio/k8s/frontend-service.yaml
-          kubectl apply -f ~/Portfolio/k8s/backend-deployment.yaml
-          kubectl apply -f ~/Portfolio/k8s/backend-service.yaml
+          kubectl apply -f ./k8s/frontend-deployment.yaml
+          kubectl apply -f ./k8s/frontend-service.yaml
+          kubectl apply -f ./k8s/backend-deployment.yaml
+          kubectl apply -f ./k8s/backend-service.yaml
