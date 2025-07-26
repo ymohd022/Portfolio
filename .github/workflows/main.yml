@@ -36,7 +36,9 @@ jobs:
         username: ${{ secrets.EC2_USER }}
         key: ${{ secrets.EC2_KEY }}
         script: |
-          cd k8s
+          rm -rf Portfolio || true
+          git clone https://github.com/ymohd022/Portfolio.git
+          cd Portfolio/k8s
           kubectl apply -f frontend-deployment.yaml
           kubectl apply -f frontend-service.yaml
           kubectl apply -f backend-deployment.yaml
