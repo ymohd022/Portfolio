@@ -51,8 +51,15 @@ jobs:
         AWS_REGION: ${{ secrets.AWS_REGION }}
         LAMBDA_FUNCTION_NAME: ${{ secrets.LAMBDA_FUNCTION_NAME }}
       run: |
+        echo "Invoking Lambda Function: $LAMBDA_FUNCTION_NAME in $AWS_REGION"
+    
         aws lambda invoke \
           --function-name "$LAMBDA_FUNCTION_NAME" \
           --region "$AWS_REGION" \
           --payload '{}' \
-          response.json && cat response.json
+          --cli-binary-format raw-in-base64-out \
+          response.json
+
+         echo "Lambda Response:"
+         cat response.json
+
