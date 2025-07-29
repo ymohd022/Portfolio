@@ -46,18 +46,21 @@ jobs:
           
     - name: Send success notification
       if: success()
-      uses: fjogeleit/http-request-action@master
-      with:
-        url: ${{ secrets.LAMBDA_ENDPOINT }}
-        method: 'POST'
-        headers: '{"Content-Type": "application/json", "Authorization": "${{ secrets.NOTIFY_SECRET }}"}'
-        data: |
-          {
-            "repo": "${{ github.repository }}",
-            "workflow": "${{ github.workflow }}",
-            "commit": "${{ github.sha }}",
-            "run_id": "${{ github.run_id }}",
-            "branch": "${{ github.ref_name }}",
-            "timestamp": "${{ github.event.head_commit.timestamp }}"
-          }
+      run: |
+        # Ensure curl is installed
+        sudo apt-get update && sudo apt-get install -y curl
+    
+        # Send POST request to Lambda
+        curl -X POST \
+           -H "Content-Type: application/json" \
+           -H "Authorization: ${{ secrets.NOTIFY_SECRET }}" \
+           -d '{
+             "repo": "${{ github.repository }}",
+             "workflow": "${{ github.workflow }}",
+             "commit": "${{ github.sha }}",
+             "run_id": "${{ github.run_id }}",
+             "branch": "${{ github.ref_name }}",
+             "timestamp": "${{ github.event.head_commit.timestamp }}"
+           }' \
+           "${{ secrets.LAMBDA_ENDPOINT }}"
 
