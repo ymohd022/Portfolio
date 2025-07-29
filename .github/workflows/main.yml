@@ -69,17 +69,20 @@ jobs:
          }')
     
          # Send request
-         response=$(curl -s -o response.txt -w "%{http_code}" -X POST \
+         response=$(curl -i -s -X POST \
             -H "Content-Type: application/json" \
             -H "Authorization: ${{ secrets.NOTIFY_SECRET }}" \
             -d "$DATA" \
             "${{ secrets.LAMBDA_ENDPOINT }}")
     
-        echo "Response status: $response"
-        echo "Response body:"
-        cat response.txt
-        if [ "$response" != "200" ]; then
-          echo "::warning::Notification failed with status $response"
+         echo "Full response:"
+         echo "$response"
+    
+        http_status=$(echo "$response" | grep HTTP | awk '{print $2}')
+        echo "Response status: $http_status"
+    
+        if [ "$http_status" != "200" ]; then
+          echo "::error::Notification failed with status $http_status"
           exit 1
         fi
 
