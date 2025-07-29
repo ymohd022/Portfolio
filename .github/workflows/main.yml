@@ -44,22 +44,20 @@ jobs:
           kubectl apply -f backend-deployment.yaml
           kubectl apply -f backend-service.yaml
           
-    - name: Trigger AWS Lambda Notification
-      env:
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        AWS_REGION: ${{ secrets.AWS_REGION }}
-        LAMBDA_FUNCTION_NAME: ${{ secrets.LAMBDA_FUNCTION_NAME }}
-      run: |
-        echo "Invoking Lambda Function: $LAMBDA_FUNCTION_NAME in $AWS_REGION"
-    
-        aws lambda invoke \
-          --function-name "$LAMBDA_FUNCTION_NAME" \
-          --region "$AWS_REGION" \
-          --payload '{}' \
-          --cli-binary-format raw-in-base64-out \
-          response.json
-
-         echo "Lambda Response:"
-         cat response.json
+    - name: Send success notification
+      if: success()
+      uses: fjogeleit/http-request-action@master
+      with:
+        url: ${{ secrets.LAMBDA_ENDPOINT }}
+        method: 'POST'
+        headers: '{"Content-Type": "application/json", "Authorization": "${{ secrets.NOTIFY_SECRET }}"}'
+        data: |
+          {
+            "repo": "${{ github.repository }}",
+            "workflow": "${{ github.workflow }}",
+            "commit": "${{ github.sha }}",
+            "run_id": "${{ github.run_id }}",
+            "branch": "${{ github.ref_name }}",
+            "timestamp": "${{ github.event.head_commit.timestamp }}"
+          }
 
