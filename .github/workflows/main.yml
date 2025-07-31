@@ -427,38 +427,62 @@ jobs:
           # Cleanup temporary files
           rm -f datasource.json k8s_dashboard.json app_dashboard.json success_payload.json success_response.json
 
-    # Configure AWS credentials (fallback)
+    # Configure AWS credentials for Lambda invocation
     - name: Configure AWS credentials
-      if: failure()
       uses: aws-actions/configure-aws-credentials@v2
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ${{ secrets.AWS_REGION }}
 
+    # Send success notification via Lambda
+    - name: Send Success Notification
+      if: success()
+      run: |
+        # Create payload file to avoid base64 encoding issues
+        cat > payload.json << EOF
+        {
+          "repository": "${{ github.repository }}",
+          "commit_sha": "${{ github.sha }}",
+          "branch": "${{ github.ref_name }}",
+          "build_status": "success",
+          "workflow_run_id": "${{ github.run_id }}",
+          "actor": "${{ github.actor }}"
+        }
+        EOF
+        
+        # Invoke Lambda with file payload
+        aws lambda invoke \
+          --function-name portfolio-notification-lambda \
+          --payload file://payload.json \
+          --cli-binary-format raw-in-base64-out \
+          response.json
+        
+        echo "Success notification sent via Lambda"
+        cat response.json
+
     # Send failure notification via Lambda (if any step fails)
     - name: Send Failure Notification
       if: failure()
       run: |
-        # Create payload file
-        cat > failure_payload.json << EOF
+        # Create payload file to avoid base64 encoding issues
+        cat > payload.json << EOF
         {
           "repository": "${{ github.repository }}",
           "commit_sha": "${{ github.sha }}",
           "branch": "${{ github.ref_name }}",
           "build_status": "failure",
           "workflow_run_id": "${{ github.run_id }}",
-          "actor": "${{ github.actor }}",
-          "message": "Portfolio deployment failed! Check GitHub Actions logs."
+          "actor": "${{ github.actor }}"
         }
         EOF
         
-        # Send failure notification
+        # Invoke Lambda with file payload
         aws lambda invoke \
           --function-name portfolio-notification-lambda \
-          --payload file://failure_payload.json \
+          --payload file://payload.json \
           --cli-binary-format raw-in-base64-out \
-          failure_response.json || echo "Lambda notification failed"
+          response.json
         
-        echo "Failure notification sent"
-        [ -f failure_response.json ] && cat failure_response.json
+        echo "Failure notification sent via Lambda"
+        cat response.json
