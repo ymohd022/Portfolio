@@ -52,6 +52,24 @@ jobs:
           kubectl apply -f backend-service.yaml
           echo "Portfolio applications deployed successfully"
           
+          # Deploy Skooner for monitoring
+          echo "🚀 Setting up Skooner monitoring..."
+          kubectl apply -f skooner-deployment.yaml
+          kubectl apply -f skooner-service.yaml
+          kubectl apply -f skooner-configmap.yaml
+          
+          # Wait for Skooner to be ready
+          echo "⏳ Waiting for Skooner to be ready..."
+          kubectl wait --for=condition=available --timeout=300s deployment/skooner -n skooner || true
+          
+          # Get Skooner access information
+          NODEPORT=$(kubectl get svc skooner-service -n skooner -o jsonpath='{.spec.ports[0].nodePort}' 2>/dev/null || echo "30001")
+          TOKEN=$(kubectl create token skooner-sa -n skooner --duration=8760h 2>/dev/null || echo "Token generation failed")
+          
+          echo "🎉 Deployment completed with monitoring!"
+          echo "📊 Skooner Dashboard: http://$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4):$NODEPORT"
+          echo "🔐 Access Token: $TOKEN"
+          
           # Display all services
           echo "📋 All deployed services:"
           kubectl get svc --all-namespaces
