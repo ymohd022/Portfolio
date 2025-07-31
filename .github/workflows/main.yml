@@ -67,7 +67,6 @@ jobs:
           kubectl apply -f skooner-deployment.yaml
           kubectl apply -f skooner-service.yaml
           kubectl apply -f skooner-configmap.yaml
-          kubectl apply -f skooner-token-secret.yaml
           
           # Wait for Skooner to be ready
           echo "⏳ Waiting for Skooner to be ready..."
@@ -75,23 +74,24 @@ jobs:
           
           # Get service information
           PROMETHEUS_NODEPORT=$(kubectl get svc prometheus-service -n monitoring -o jsonpath='{.spec.ports[0].nodePort}' 2>/dev/null || echo "30000")
-          NODEPORT=$(kubectl get svc skooner-service -n skooner -o jsonpath='{.spec.ports[0].nodePort}' 2>/dev/null || echo "30001")
-          TOKEN=$(kubectl create token skooner-sa -n skooner --duration=8760h)
+          SKOONER_NODEPORT=$(kubectl get svc skooner-service -n skooner -o jsonpath='{.spec.ports[0].nodePort}' 2>/dev/null || echo "30001")
           PUBLIC_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
           
+          # Generate access tokens
+          SKOONER_TOKEN=$(kubectl create token skooner-sa -n skooner --duration=8760h 2>/dev/null || echo "Token generation failed")
           
           echo "🎉 Deployment completed with monitoring!"
           echo "📊 Prometheus: http://$PUBLIC_IP:$PROMETHEUS_NODEPORT"
-          echo "📊 Skooner Dashboard: http://$PUBLIC_IP:$NODEPORT"
-          echo "🔐 Skooner Access Token: $TOKEN"
+          echo "📊 Skooner Dashboard: http://$PUBLIC_IP:$SKOONER_NODEPORT"
+          echo "🔐 Skooner Access Token: $SKOONER_TOKEN"
           
           # Display all services
           echo "📋 All deployed services:"
           kubectl get svc --all-namespaces
           
           # Export variables for Grafana setup
-          echo "PROMETHEUS_URL=http://$PUBLIC_IP:$PROMETHEUS_NODEPORT" | tee -a $GITHUB_ENV
-          echo "PUBLIC_IP=$PUBLIC_IP" | tee -a $GITHUB_ENV
+          echo "PROMETHEUS_URL=http://$PUBLIC_IP:$PROMETHEUS_NODEPORT" >> $GITHUB_ENV
+          echo "PUBLIC_IP=$PUBLIC_IP" >> $GITHUB_ENV
 
     # Setup Grafana Dashboard
     - name: Setup Grafana Dashboard

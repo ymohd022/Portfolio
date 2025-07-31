@@ -57,21 +57,12 @@ spec:
           name: http
           protocol: TCP
         env:
-         - name: AUTH_TOKEN
-           valueFrom:
-             secretKeyRef:
-               name: skooner-token
-               key: token
-         - name: METRICS_PROVIDER
-           value: "prometheus"
-         - name: METRICS_PROMETHEUS_URL
-           value: "http://prometheus-service.monitoring:9090"
-         - name: KUBERNETES_NAMESPACE
-           valueFrom:
-             fieldRef:
-               fieldPath: metadata.namespace
-         - name: SERVER_ROOT
-           value: "/"
+        - name: KUBERNETES_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: SERVER_ROOT
+          value: "/"
         args:
         - --insecure-port=4654
         - --enable-insecure-login
