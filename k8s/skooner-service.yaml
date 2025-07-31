@@ -8,7 +8,7 @@ metadata:
 spec:
   type: NodePort
   ports:
-  - port: 80
+  - port: 4654
     targetPort: 4654
     nodePort: 30001
     protocol: TCP
@@ -19,14 +19,14 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: skooner-loadbalancer
+  name: skooner-clusterip
   namespace: skooner
   labels:
     app: skooner
 spec:
-  type: LoadBalancer
+  type: ClusterIP
   ports:
-  - port: 80
+  - port: 4654
     targetPort: 4654
     protocol: TCP
     name: http
