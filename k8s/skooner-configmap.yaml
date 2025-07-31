@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: skooner-config
+  namespace: skooner
+data:
+  config.json: |
+    {
+      "kubernetesApi": {
+        "port": 8001
+      },
+      "oidc": {
+        "enabled": false
+      },
+      "metrics": {
+        "enabled": true,
+        "prometheus": {
+          "enabled": true,
+          "endpoint": "http://prometheus:9090"
+        }
+      },
+      "logging": {
+        "level": "info"
+      },
+      "ui": {
+        "theme": "dark",
+        "autoRefresh": 30,
+        "showMetrics": true
+      }
+    }
