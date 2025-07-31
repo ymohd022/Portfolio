@@ -41,6 +41,7 @@ jobs:
         username: ${{ secrets.EC2_USER }}
         key: ${{ secrets.EC2_KEY }}
         script: |
+          set -e
           rm -rf Portfolio || true
           git clone https://github.com/ymohd022/Portfolio.git
           cd Portfolio/k8s
@@ -65,8 +66,8 @@ jobs:
           # Deploy Skooner for monitoring
           echo "🚀 Setting up Skooner monitoring..."
           kubectl apply -f skooner-deployment.yaml
-          kubectl apply -f skooner-service.yaml
           kubectl apply -f skooner-configmap.yaml
+          kubectl apply -f skooner-service.yaml
           
           # Wait for Skooner to be ready
           echo "⏳ Waiting for Skooner to be ready..."
@@ -74,399 +75,233 @@ jobs:
           
           # Get service information
           PROMETHEUS_NODEPORT=$(kubectl get svc prometheus-service -n monitoring -o jsonpath='{.spec.ports[0].nodePort}' 2>/dev/null || echo "30000")
-          SKOONER_NODEPORT=$(kubectl get svc skooner-service -n skooner -o jsonpath='{.spec.ports[0].nodePort}' 2>/dev/null || echo "30001")
+          SKOONER_NODEPORT=$(kubectl get svc skooner-service -n skooner -o jsonpath='{.spec.ports[0].nodePort}' 2>/dev/null || echo "30123")
           PUBLIC_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
           
           # Generate access tokens
           SKOONER_TOKEN=$(kubectl create token skooner-sa -n skooner --duration=8760h 2>/dev/null || echo "Token generation failed")
           
           echo "🎉 Deployment completed with monitoring!"
-          echo "📊 Prometheus: http://$PUBLIC_IP:$PROMETHEUS_NODEPORT"
-          echo "📊 Skooner Dashboard: http://$PUBLIC_IP:$SKOONER_NODEPORT"
-          echo "🔐 Skooner Access Token: $SKOONER_TOKEN"
+          echo "📊 Prometheus: http://${PUBLIC_IP}:${PROMETHEUS_NODEPORT}"
+          echo "📊 Skooner Dashboard: http://${PUBLIC_IP}:${SKOONER_NODEPORT}"
+          echo "🔐 Skooner Access Token: ${SKOONER_TOKEN}"
           
           # Display all services
           echo "📋 All deployed services:"
           kubectl get svc --all-namespaces
           
-          # Export variables for Grafana setup
-          echo "PROMETHEUS_URL=http://$PUBLIC_IP:$PROMETHEUS_NODEPORT" >> $GITHUB_ENV
-          echo "PUBLIC_IP=$PUBLIC_IP" >> $GITHUB_ENV
+          # Save environment variables to file for next steps
+          echo "PROMETHEUS_URL=http://${PUBLIC_IP}:${PROMETHEUS_NODEPORT}" > /tmp/env_vars.txt
+          echo "PUBLIC_IP=${PUBLIC_IP}" >> /tmp/env_vars.txt
+          echo "SKOONER_TOKEN=${SKOONER_TOKEN}" >> /tmp/env_vars.txt
 
     # Setup Grafana Dashboard
     - name: Setup Grafana Dashboard
       id: setup-grafana
-      run: |
-        # Create Grafana setup script
-        cat > grafana_setup.sh << 'EOF'
-        #!/bin/bash
-        set -e
-        
-        GRAFANA_URL="https://mohdyousuf9059.grafana.net"
-        GRAFANA_API_KEY="$1"
-        PROMETHEUS_URL="$2"
-        
-        if [ -z "$GRAFANA_API_KEY" ] || [ -z "$PROMETHEUS_URL" ]; then
-            echo "Usage: $0 <GRAFANA_API_KEY> <PROMETHEUS_URL>"
-            exit 1
-        fi
-        
-        echo "🚀 Setting up Grafana Dashboard..."
-        
-        # Function to make API calls
-        make_api_call() {
-            local method=$1
-            local endpoint=$2
-            local data=$3
-            
-            if [ -n "$data" ]; then
-                curl -s -X $method \
-                    -H "Authorization: Bearer $GRAFANA_API_KEY" \
-                    -H "Content-Type: application/json" \
-                    -d "$data" \
-                    "$GRAFANA_URL/api/$endpoint"
-            else
-                curl -s -X $method \
-                    -H "Authorization: Bearer $GRAFANA_API_KEY" \
-                    -H "Content-Type: application/json" \
-                    "$GRAFANA_URL/api/$endpoint"
-            fi
-        }
-        
-        # 1. Create/Update Prometheus Data Source
-        echo "📊 Setting up Prometheus data source..."
-        DATASOURCE_PAYLOAD=$(cat <<EOFDS
-        {
-          "name": "Portfolio-Prometheus",
-          "type": "prometheus",
-          "url": "$PROMETHEUS_URL",
-          "access": "proxy",
-          "isDefault": true,
-          "basicAuth": false,
-          "jsonData": {
-            "httpMethod": "POST",
-            "manageAlerts": true,
-            "prometheusType": "Prometheus",
-            "prometheusVersion": "2.40.0",
-            "cacheLevel": "High",
-            "disableMetricsLookup": false,
-            "incrementalQuerying": false
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USER }}
+        key: ${{ secrets.EC2_KEY }}
+        script: |
+          # Read environment variables
+          source /tmp/env_vars.txt
+          
+          # Create Grafana setup script
+          cat > grafana_setup.sh << 'EOF'
+          #!/bin/bash
+          set -e
+          
+          GRAFANA_URL="https://mohdyousuf9059.grafana.net"
+          GRAFANA_API_KEY="$1"
+          PROMETHEUS_URL="$2"
+          
+          if [ -z "$GRAFANA_API_KEY" ] || [ -z "$PROMETHEUS_URL" ]; then
+              echo "Usage: $0 <GRAFANA_API_KEY> <PROMETHEUS_URL>"
+              exit 1
+          fi
+          
+          echo "🚀 Setting up Grafana Dashboard..."
+          
+          # Function to make API calls
+          make_api_call() {
+              local method=$1
+              local endpoint=$2
+              local data=$3
+              
+              if [ -n "$data" ]; then
+                  curl -s -X $method \
+                      -H "Authorization: Bearer $GRAFANA_API_KEY" \
+                      -H "Content-Type: application/json" \
+                      -d "$data" \
+                      "$GRAFANA_URL/api/$endpoint"
+              else
+                  curl -s -X $method \
+                      -H "Authorization: Bearer $GRAFANA_API_KEY" \
+                      -H "Content-Type: application/json" \
+                      "$GRAFANA_URL/api/$endpoint"
+              fi
           }
-        }
-        EOFDS
-        )
-        
-        # Try to create data source (will fail if exists, that's ok)
-        DATASOURCE_RESPONSE=$(make_api_call "POST" "datasources" "$DATASOURCE_PAYLOAD" 2>/dev/null || echo "Data source might already exist")
-        echo "Data source response: $DATASOURCE_RESPONSE"
-        
-        # Get existing data sources to find UID
-        EXISTING_DS=$(make_api_call "GET" "datasources")
-        DATASOURCE_UID=$(echo "$EXISTING_DS" | grep -o '"uid":"[^"]*".*"name":"Portfolio-Prometheus"' | cut -d'"' -f4 | head -1)
-        
-        if [ -z "$DATASOURCE_UID" ]; then
-            DATASOURCE_UID="portfolio-prometheus"
-        fi
-        
-        echo "📈 Using data source UID: $DATASOURCE_UID"
-        
-        # 2. Create Portfolio Monitoring Dashboard
-        echo "📊 Creating Portfolio Dashboard..."
-        DASHBOARD_PAYLOAD=$(cat <<EOFDASH
-        {
-          "dashboard": {
-            "id": null,
-            "title": "Portfolio Application Monitoring",
-            "tags": ["portfolio", "kubernetes", "monitoring"],
-            "timezone": "browser",
-            "panels": [
-              {
-                "id": 1,
-                "title": "Application Uptime",
-                "type": "stat",
-                "targets": [
-                  {
-                    "expr": "up{job=~\"portfolio-.*|prometheus\"}",
-                    "refId": "A",
-                    "datasource": {
-                      "type": "prometheus",
-                      "uid": "$DATASOURCE_UID"
+          
+          # 1. Create/Update Prometheus Data Source
+          echo "📊 Setting up Prometheus data source..."
+          DATASOURCE_PAYLOAD=$(cat <<EOFDS
+          {
+            "name": "Portfolio-Prometheus",
+            "type": "prometheus",
+            "url": "$PROMETHEUS_URL",
+            "access": "proxy",
+            "isDefault": true,
+            "basicAuth": false,
+            "jsonData": {
+              "httpMethod": "POST",
+              "manageAlerts": true,
+              "prometheusType": "Prometheus",
+              "prometheusVersion": "2.40.0",
+              "cacheLevel": "High",
+              "disableMetricsLookup": false,
+              "incrementalQuerying": false
+            }
+          }
+          EOFDS
+          )
+          
+          # Try to create data source (will fail if exists, that's ok)
+          DATASOURCE_RESPONSE=$(make_api_call "POST" "datasources" "$DATASOURCE_PAYLOAD" 2>/dev/null || echo "Data source might already exist")
+          echo "Data source response: $DATASOURCE_RESPONSE"
+          
+          # Get existing data sources to find UID
+          EXISTING_DS=$(make_api_call "GET" "datasources")
+          DATASOURCE_UID=$(echo "$EXISTING_DS" | grep -o '"uid":"[^"]*".*"name":"Portfolio-Prometheus"' | cut -d'"' -f4 | head -1)
+          
+          if [ -z "$DATASOURCE_UID" ]; then
+              DATASOURCE_UID="portfolio-prometheus"
+          fi
+          
+          echo "📈 Using data source UID: $DATASOURCE_UID"
+          
+          # 2. Create Portfolio Monitoring Dashboard
+          echo "📊 Creating Portfolio Dashboard..."
+          DASHBOARD_PAYLOAD=$(cat <<EOFDASH
+          {
+            "dashboard": {
+              "id": null,
+              "title": "Portfolio Application Monitoring",
+              "tags": ["portfolio", "kubernetes", "monitoring"],
+              "timezone": "browser",
+              "panels": [
+                {
+                  "id": 1,
+                  "title": "Application Uptime",
+                  "type": "stat",
+                  "targets": [
+                    {
+                      "expr": "up{job=~\"portfolio-.*|prometheus\"}",
+                      "refId": "A",
+                      "datasource": {
+                        "type": "prometheus",
+                        "uid": "$DATASOURCE_UID"
+                      }
+                    }
+                  ],
+                  "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+                  "fieldConfig": {
+                    "defaults": {
+                      "color": {"mode": "palette-classic"},
+                      "custom": {
+                        "displayMode": "list",
+                        "placement": "bottom"
+                      },
+                      "mappings": [],
+                      "thresholds": {
+                        "steps": [
+                          {"color": "green", "value": null},
+                          {"color": "red", "value": 0},
+                          {"color": "green", "value": 1}
+                        ]
+                      }
                     }
                   }
-                ],
-                "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
-                "fieldConfig": {
-                  "defaults": {
-                    "color": {"mode": "palette-classic"},
-                    "custom": {
-                      "displayMode": "list",
-                      "placement": "bottom"
-                    },
-                    "mappings": [],
-                    "thresholds": {
-                      "steps": [
-                        {"color": "green", "value": null},
-                        {"color": "red", "value": 0},
-                        {"color": "green", "value": 1}
-                      ]
+                },
+                {
+                  "id": 2,
+                  "title": "HTTP Requests Rate",
+                  "type": "timeseries",
+                  "targets": [
+                    {
+                      "expr": "rate(prometheus_http_requests_total[5m])",
+                      "refId": "A",
+                      "datasource": {
+                        "type": "prometheus",
+                        "uid": "$DATASOURCE_UID"
+                      }
                     }
-                  }
+                  ],
+                  "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
+                },
+                {
+                  "id": 3,
+                  "title": "Memory Usage",
+                  "type": "timeseries",
+                  "targets": [
+                    {
+                      "expr": "prometheus_tsdb_head_memory_usage_bytes / 1024 / 1024",
+                      "refId": "A",
+                      "datasource": {
+                        "type": "prometheus",
+                        "uid": "$DATASOURCE_UID"
+                      },
+                      "legendFormat": "Memory Usage (MB)"
+                    }
+                  ],
+                  "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
+                },
+                {
+                  "id": 4,
+                  "title": "Active Targets",
+                  "type": "stat",
+                  "targets": [
+                    {
+                      "expr": "count(up == 1)",
+                      "refId": "A",
+                      "datasource": {
+                        "type": "prometheus",
+                        "uid": "$DATASOURCE_UID"
+                      }
+                    }
+                  ],
+                  "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
                 }
-              },
-              {
-                "id": 2,
-                "title": "HTTP Requests Rate",
-                "type": "timeseries",
-                "targets": [
-                  {
-                    "expr": "rate(prometheus_http_requests_total[5m])",
-                    "refId": "A",
-                    "datasource": {
-                      "type": "prometheus",
-                      "uid": "$DATASOURCE_UID"
-                    }
-                  }
-                ],
-                "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
-              },
-              {
-                "id": 3,
-                "title": "Memory Usage",
-                "type": "timeseries",
-                "targets": [
-                  {
-                    "expr": "prometheus_tsdb_head_memory_usage_bytes / 1024 / 1024",
-                    "refId": "A",
-                    "datasource": {
-                      "type": "prometheus",
-                      "uid": "$DATASOURCE_UID"
-                    },
-                    "legendFormat": "Memory Usage (MB)"
-                  }
-                ],
-                "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
-              },
-              {
-                "id": 4,
-                "title": "Active Targets",
-                "type": "stat",
-                "targets": [
-                  {
-                    "expr": "count(up == 1)",
-                    "refId": "A",
-                    "datasource": {
-                      "type": "prometheus",
-                      "uid": "$DATASOURCE_UID"
-                    }
-                  }
-                ],
-                "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
-              },
-              {
-                "id": 5,
-                "title": "Prometheus Targets Status",
-                "type": "table",
-                "targets": [
-                  {
-                    "expr": "up",
-                    "refId": "A",
-                    "datasource": {
-                      "type": "prometheus",
-                      "uid": "$DATASOURCE_UID"
-                    },
-                    "format": "table",
-                    "instant": true
-                  }
-                ],
-                "gridPos": {"h": 8, "w": 24, "x": 0, "y": 16}
-              },
-              {
-                "id": 6,
-                "title": "Prometheus TSDB Chunks",
-                "type": "timeseries",
-                "targets": [
-                  {
-                    "expr": "prometheus_tsdb_head_chunks",
-                    "refId": "A",
-                    "datasource": {
-                      "type": "prometheus",
-                      "uid": "$DATASOURCE_UID"
-                    },
-                    "legendFormat": "Head Chunks"
-                  }
-                ],
-                "gridPos": {"h": 8, "w": 12, "x": 0, "y": 24}
-              },
-              {
-                "id": 7,
-                "title": "Query Duration",
-                "type": "timeseries",
-                "targets": [
-                  {
-                    "expr": "prometheus_engine_query_duration_seconds",
-                    "refId": "A",
-                    "datasource": {
-                      "type": "prometheus",
-                      "uid": "$DATASOURCE_UID"
-                    },
-                    "legendFormat": "Query Duration"
-                  }
-                ],
-                "gridPos": {"h": 8, "w": 12, "x": 12, "y": 24}
-              }
-            ],
-            "time": {"from": "now-1h", "to": "now"},
-            "timepicker": {},
-            "timezone": "",
-            "refresh": "30s",
-            "schemaVersion": 39,
-            "version": 0
-          },
-          "overwrite": true
-        }
-        EOFDASH
-        )
-        
-        DASHBOARD_RESPONSE=$(make_api_call "POST" "dashboards/db" "$DASHBOARD_PAYLOAD")
-        echo "Dashboard response: $DASHBOARD_RESPONSE"
-        
-        # Extract dashboard URL
-        DASHBOARD_URL=$(echo "$DASHBOARD_RESPONSE" | grep -o '"url":"[^"]*"' | cut -d'"' -f4 | head -1)
-        if [ -n "$DASHBOARD_URL" ]; then
-            echo "✅ Portfolio Dashboard created successfully!"
-            echo "🔗 Dashboard URL: $GRAFANA_URL$DASHBOARD_URL"
-        fi
-        
-        # 3. Create Kubernetes Cluster Overview Dashboard
-        echo "📊 Creating Kubernetes Overview Dashboard..."
-        K8S_DASHBOARD_PAYLOAD=$(cat <<EOFK8S
-        {
-          "dashboard": {
-            "id": null,
-            "title": "Kubernetes Cluster Overview",
-            "tags": ["kubernetes", "cluster", "overview"],
-            "timezone": "browser",
-            "panels": [
-              {
-                "id": 1,
-                "title": "Prometheus Status",
-                "type": "stat",
-                "targets": [
-                  {
-                    "expr": "up{job=\"prometheus\"}",
-                    "refId": "A",
-                    "datasource": {
-                      "type": "prometheus",
-                      "uid": "$DATASOURCE_UID"
-                    }
-                  }
-                ],
-                "gridPos": {"h": 6, "w": 6, "x": 0, "y": 0},
-                "fieldConfig": {
-                  "defaults": {
-                    "color": {"mode": "thresholds"},
-                    "thresholds": {
-                      "steps": [
-                        {"color": "red", "value": null},
-                        {"color": "green", "value": 1}
-                      ]
-                    }
-                  }
-                }
-              },
-              {
-                "id": 2,
-                "title": "Total Scrape Targets",
-                "type": "stat",
-                "targets": [
-                  {
-                    "expr": "count(up)",
-                    "refId": "A",
-                    "datasource": {
-                      "type": "prometheus",
-                      "uid": "$DATASOURCE_UID"
-                    }
-                  }
-                ],
-                "gridPos": {"h": 6, "w": 6, "x": 6, "y": 0}
-              },
-              {
-                "id": 3,
-                "title": "Healthy Targets",
-                "type": "stat",
-                "targets": [
-                  {
-                    "expr": "count(up == 1)",
-                    "refId": "A",
-                    "datasource": {
-                      "type": "prometheus",
-                      "uid": "$DATASOURCE_UID"
-                    }
-                  }
-                ],
-                "gridPos": {"h": 6, "w": 6, "x": 12, "y": 0}
-              },
-              {
-                "id": 4,
-                "title": "Data Ingestion Rate",
-                "type": "stat",
-                "targets": [
-                  {
-                    "expr": "rate(prometheus_tsdb_head_samples_appended_total[5m])",
-                    "refId": "A",
-                    "datasource": {
-                      "type": "prometheus",
-                      "uid": "$DATASOURCE_UID"
-                    }
-                  }
-                ],
-                "gridPos": {"h": 6, "w": 6, "x": 18, "y": 0}
-              },
-              {
-                "id": 5,
-                "title": "Scrape Duration",
-                "type": "timeseries",
-                "targets": [
-                  {
-                    "expr": "prometheus_target_scrape_duration_seconds",
-                    "refId": "A",
-                    "datasource": {
-                      "type": "prometheus",
-                      "uid": "$DATASOURCE_UID"
-                    }
-                  }
-                ],
-                "gridPos": {"h": 8, "w": 24, "x": 0, "y": 6}
-              }
-            ],
-            "time": {"from": "now-1h", "to": "now"},
-            "refresh": "30s",
-            "schemaVersion": 39,
-            "version": 0
-          },
-          "overwrite": true
-        }
-        EOFK8S
-        )
-        
-        K8S_DASHBOARD_RESPONSE=$(make_api_call "POST" "dashboards/db" "$K8S_DASHBOARD_PAYLOAD")
-        echo "Kubernetes dashboard response: $K8S_DASHBOARD_RESPONSE"
-        
-        K8S_DASHBOARD_URL=$(echo "$K8S_DASHBOARD_RESPONSE" | grep -o '"url":"[^"]*"' | cut -d'"' -f4 | head -1)
-        if [ -n "$K8S_DASHBOARD_URL" ]; then
-            echo "✅ Kubernetes Dashboard created successfully!"
-            echo "🔗 K8s Dashboard URL: $GRAFANA_URL$K8S_DASHBOARD_URL"
-        fi
-        
-        echo "🎉 Grafana setup completed!"
-        echo "📊 Access your dashboards at: $GRAFANA_URL"
-        echo "📈 Portfolio Dashboard: $GRAFANA_URL$DASHBOARD_URL"
-        echo "🔧 Kubernetes Dashboard: $GRAFANA_URL$K8S_DASHBOARD_URL"
-        EOF
-        
-        # Make script executable and run it
-        chmod +x grafana_setup.sh
-        ./grafana_setup.sh "${{ secrets.GRAFANA_API_KEY }}" "${{ env.PROMETHEUS_URL }}"
+              ],
+              "time": {"from": "now-1h", "to": "now"},
+              "timepicker": {},
+              "timezone": "",
+              "refresh": "30s",
+              "schemaVersion": 39,
+              "version": 0
+            },
+            "overwrite": true
+          }
+          EOFDASH
+          )
+          
+          DASHBOARD_RESPONSE=$(make_api_call "POST" "dashboards/db" "$DASHBOARD_PAYLOAD")
+          echo "Dashboard response: $DASHBOARD_RESPONSE"
+          
+          # Extract dashboard URL
+          DASHBOARD_URL=$(echo "$DASHBOARD_RESPONSE" | grep -o '"url":"[^"]*"' | cut -d'"' -f4 | head -1)
+          if [ -n "$DASHBOARD_URL" ]; then
+              echo "✅ Portfolio Dashboard created successfully!"
+              echo "🔗 Dashboard URL: $GRAFANA_URL$DASHBOARD_URL"
+          fi
+          
+          echo "🎉 Grafana setup completed!"
+          echo "📊 Access your dashboards at: $GRAFANA_URL"
+          EOF
+          
+          # Make script executable and run it
+          chmod +x grafana_setup.sh
+          ./grafana_setup.sh "${{ secrets.GRAFANA_API_KEY }}" "$PROMETHEUS_URL"
 
     # Configure AWS credentials for Lambda invocation
     - name: Configure AWS credentials
@@ -479,54 +314,67 @@ jobs:
     # Send success notification via Lambda
     - name: Send Success Notification
       if: success()
-      run: |
-        # Create payload file to avoid base64 encoding issues
-        cat > payload.json << EOF
-        {
-          "repository": "${{ github.repository }}",
-          "commit_sha": "${{ github.sha }}",
-          "branch": "${{ github.ref_name }}",
-          "build_status": "success",
-          "workflow_run_id": "${{ github.run_id }}",
-          "actor": "${{ github.actor }}",
-          "prometheus_url": "${{ env.PROMETHEUS_URL }}",
-          "public_ip": "${{ env.PUBLIC_IP }}",
-          "grafana_url": "https://mohdyousuf9059.grafana.net"
-        }
-        EOF
-        
-        # Invoke Lambda with file payload
-        aws lambda invoke \
-          --function-name portfolio-notification-lambda \
-          --payload file://payload.json \
-          --cli-binary-format raw-in-base64-out \
-          response.json
-        
-        echo "Success notification sent via Lambda"
-        cat response.json
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USER }}
+        key: ${{ secrets.EC2_KEY }}
+        script: |
+          # Read environment variables
+          source /tmp/env_vars.txt
+          
+          # Create payload file to avoid base64 encoding issues
+          cat > payload.json << EOF
+          {
+            "repository": "${{ github.repository }}",
+            "commit_sha": "${{ github.sha }}",
+            "branch": "${{ github.ref_name }}",
+            "build_status": "success",
+            "workflow_run_id": "${{ github.run_id }}",
+            "actor": "${{ github.actor }}",
+            "prometheus_url": "${PROMETHEUS_URL}",
+            "public_ip": "${PUBLIC_IP}",
+            "grafana_url": "https://mohdyousuf9059.grafana.net"
+          }
+          EOF
+          
+          # Invoke Lambda with file payload
+          aws lambda invoke \
+            --function-name portfolio-notification-lambda \
+            --payload file://payload.json \
+            --cli-binary-format raw-in-base64-out \
+            response.json
+          
+          echo "Success notification sent via Lambda"
+          cat response.json
 
     # Send failure notification via Lambda (if any step fails)
     - name: Send Failure Notification
       if: failure()
-      run: |
-        # Create payload file to avoid base64 encoding issues
-        cat > payload.json << EOF
-        {
-          "repository": "${{ github.repository }}",
-          "commit_sha": "${{ github.sha }}",
-          "branch": "${{ github.ref_name }}",
-          "build_status": "failure",
-          "workflow_run_id": "${{ github.run_id }}",
-          "actor": "${{ github.actor }}"
-        }
-        EOF
-        
-        # Invoke Lambda with file payload
-        aws lambda invoke \
-          --function-name portfolio-notification-lambda \
-          --payload file://payload.json \
-          --cli-binary-format raw-in-base64-out \
-          response.json
-        
-        echo "Failure notification sent via Lambda"
-        cat response.json
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USER }}
+        key: ${{ secrets.EC2_KEY }}
+        script: |
+          # Create payload file to avoid base64 encoding issues
+          cat > payload.json << EOF
+          {
+            "repository": "${{ github.repository }}",
+            "commit_sha": "${{ github.sha }}",
+            "branch": "${{ github.ref_name }}",
+            "build_status": "failure",
+            "workflow_run_id": "${{ github.run_id }}",
+            "actor": "${{ github.actor }}"
+          }
+          EOF
+          
+          # Invoke Lambda with file payload
+          aws lambda invoke \
+            --function-name portfolio-notification-lambda \
+            --payload file://payload.json \
+            --cli-binary-format raw-in-base64-out \
+            response.json
+          
+          echo "Failure notification sent via Lambda"
+          cat response.json
