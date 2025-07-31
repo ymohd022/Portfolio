@@ -77,13 +77,10 @@ jobs:
           SKOONER_NODEPORT=$(kubectl get svc skooner-service -n skooner -o jsonpath='{.spec.ports[0].nodePort}' 2>/dev/null || echo "30123")
           PUBLIC_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
           
-          # Generate access tokens
-          SKOONER_TOKEN=$(kubectl create token skooner-sa -n skooner --duration=8760h 2>/dev/null || echo "Token generation failed")
           
           echo "🎉 Deployment completed with monitoring!"
           echo "📊 Prometheus: http://$PUBLIC_IP:$PROMETHEUS_NODEPORT"
           echo "📊 Skooner Dashboard: http://$PUBLIC_IP:$SKOONER_NODEPORT"
-          echo "🔐 Skooner Access Token: $SKOONER_TOKEN"
           
           # Display all services
           echo "📋 All deployed services:"
