@@ -31,6 +31,24 @@ metadata:
     kubernetes.io/service-account.name: skooner-sa
 type: kubernetes.io/service-account-token
 ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: skooner-config
+  namespace: skooner
+data:
+  config.yaml: |
+    auth:
+      enabled: false
+    kubeConfig:
+      inCluster: true
+    ui:
+      theme: dark
+      autoRefresh: 30
+    server:
+      insecure: true
+      port: 4654
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -63,12 +81,16 @@ spec:
               fieldPath: metadata.namespace
         - name: SERVER_ROOT
           value: "/"
+        - name: DISABLE_AUTH
+          value: "true"
         args:
         - --insecure-port=4654
         - --enable-insecure-login
         - --system-banner=Portfolio Monitoring Dashboard
-        - --skip-login
+        - --disable-sign-in-info
+        - --auto-generate-certificates=false
         - --bind-address=0.0.0.0
+        - --port=4654
         livenessProbe:
           httpGet:
             path: /
@@ -92,3 +114,10 @@ spec:
           limits:
             memory: "512Mi"
             cpu: "500m"
+        volumeMounts:
+        - name: config
+          mountPath: /app/config
+      volumes:
+      - name: config
+        configMap:
+          name: skooner-config

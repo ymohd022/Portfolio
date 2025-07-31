@@ -90,14 +90,14 @@ jobs:
           echo "📋 All deployed services:"
           kubectl get svc --all-namespaces
           
-          # Setup Grafana Dashboard
+          # Setup Grafana with pre-built dashboards
           PROMETHEUS_URL="http://${PUBLIC_IP}:${PROMETHEUS_NODEPORT}"
           GRAFANA_URL="https://mohdyousuf9059.grafana.net"
           GRAFANA_API_KEY="${{ secrets.GRAFANA_API_KEY }}"
           
-          echo "🚀 Setting up Grafana Dashboard..."
+          echo "🚀 Setting up Grafana with pre-built dashboards..."
           
-          # Create Grafana data source
+          # 1. Create Prometheus data source with proper configuration
           cat > datasource.json << DSEOF
           {
             "name": "Portfolio-Prometheus",
@@ -110,37 +110,175 @@ jobs:
               "httpMethod": "POST",
               "manageAlerts": true,
               "prometheusType": "Prometheus",
-              "prometheusVersion": "2.40.0"
+              "prometheusVersion": "2.45.0",
+              "cacheLevel": "High",
+              "disableMetricsLookup": false,
+              "incrementalQuerying": false,
+              "exemplarTraceIdDestinations": [],
+              "scrapeInterval": "15s",
+              "queryTimeout": "60s",
+              "timeInterval": "15s"
             }
           }
           DSEOF
           
-          # Try to create data source
+          # Delete existing data source if it exists
+          curl -s -X DELETE \
+            -H "Authorization: Bearer ${GRAFANA_API_KEY}" \
+            "${GRAFANA_URL}/api/datasources/name/Portfolio-Prometheus" || true
+          
+          # Create new data source
           DS_RESPONSE=$(curl -s -X POST \
             -H "Authorization: Bearer ${GRAFANA_API_KEY}" \
             -H "Content-Type: application/json" \
             -d @datasource.json \
-            "${GRAFANA_URL}/api/datasources" || echo "Data source creation failed")
+            "${GRAFANA_URL}/api/datasources")
           
           echo "📊 Data source response: ${DS_RESPONSE}"
           
           # Get data source UID
           EXISTING_DS=$(curl -s -X GET \
             -H "Authorization: Bearer ${GRAFANA_API_KEY}" \
-            -H "Content-Type: application/json" \
             "${GRAFANA_URL}/api/datasources")
           
-          DATASOURCE_UID=$(echo "${EXISTING_DS}" | grep -o '"uid":"[^"]*".*"name":"Portfolio-Prometheus"' | cut -d'"' -f4 | head -1 || echo "portfolio-prometheus")
+          DATASOURCE_UID=$(echo "${EXISTING_DS}" | grep -A5 -B5 "Portfolio-Prometheus" | grep '"uid"' | head -1 | cut -d'"' -f4)
+          
+          if [ -z "${DATASOURCE_UID}" ]; then
+            DATASOURCE_UID="portfolio-prometheus-uid"
+          fi
           
           echo "📈 Using data source UID: ${DATASOURCE_UID}"
           
-          # Create Portfolio Dashboard
-          cat > dashboard.json << DASHEOF
+          # 2. Create comprehensive Kubernetes monitoring dashboard
+          cat > k8s_dashboard.json << K8SDASHEOF
           {
             "dashboard": {
               "id": null,
-              "title": "Portfolio Application Monitoring",
-              "tags": ["portfolio", "kubernetes", "monitoring"],
+              "title": "Kubernetes Cluster Monitoring",
+              "tags": ["kubernetes", "cluster", "prometheus"],
+              "timezone": "browser",
+              "panels": [
+                {
+                  "id": 1,
+                  "title": "Cluster Status",
+                  "type": "stat",
+                  "targets": [
+                    {
+                      "expr": "up",
+                      "refId": "A",
+                      "datasource": {"type": "prometheus", "uid": "${DATASOURCE_UID}"},
+                      "legendFormat": "{{job}} - {{instance}}"
+                    }
+                  ],
+                  "gridPos": {"h": 8, "w": 6, "x": 0, "y": 0},
+                  "fieldConfig": {
+                    "defaults": {
+                      "color": {"mode": "thresholds"},
+                      "thresholds": {
+                        "steps": [
+                          {"color": "red", "value": null},
+                          {"color": "green", "value": 1}
+                        ]
+                      },
+                      "unit": "short"
+                    }
+                  }
+                },
+                {
+                  "id": 2,
+                  "title": "Prometheus Targets",
+                  "type": "stat",
+                  "targets": [
+                    {
+                      "expr": "count(up)",
+                      "refId": "A",
+                      "datasource": {"type": "prometheus", "uid": "${DATASOURCE_UID}"}
+                    }
+                  ],
+                  "gridPos": {"h": 8, "w": 6, "x": 6, "y": 0}
+                },
+                {
+                  "id": 3,
+                  "title": "HTTP Request Rate",
+                  "type": "timeseries",
+                  "targets": [
+                    {
+                      "expr": "rate(prometheus_http_requests_total[5m])",
+                      "refId": "A",
+                      "datasource": {"type": "prometheus", "uid": "${DATASOURCE_UID}"},
+                      "legendFormat": "{{handler}} - {{code}}"
+                    }
+                  ],
+                  "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
+                },
+                {
+                  "id": 4,
+                  "title": "Memory Usage",
+                  "type": "timeseries",
+                  "targets": [
+                    {
+                      "expr": "prometheus_tsdb_head_memory_usage_bytes / 1024 / 1024",
+                      "refId": "A",
+                      "datasource": {"type": "prometheus", "uid": "${DATASOURCE_UID}"},
+                      "legendFormat": "Memory Usage (MB)"
+                    }
+                  ],
+                  "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
+                },
+                {
+                  "id": 5,
+                  "title": "Disk Usage",
+                  "type": "timeseries",
+                  "targets": [
+                    {
+                      "expr": "prometheus_tsdb_head_samples_appended_total",
+                      "refId": "A",
+                      "datasource": {"type": "prometheus", "uid": "${DATASOURCE_UID}"},
+                      "legendFormat": "Samples Appended"
+                    }
+                  ],
+                  "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
+                },
+                {
+                  "id": 6,
+                  "title": "All Targets Status",
+                  "type": "table",
+                  "targets": [
+                    {
+                      "expr": "up",
+                      "refId": "A",
+                      "datasource": {"type": "prometheus", "uid": "${DATASOURCE_UID}"},
+                      "format": "table",
+                      "instant": true
+                    }
+                  ],
+                  "gridPos": {"h": 8, "w": 24, "x": 0, "y": 16},
+                  "fieldConfig": {
+                    "defaults": {
+                      "custom": {
+                        "displayMode": "auto",
+                        "inspect": false
+                      }
+                    }
+                  }
+                }
+              ],
+              "time": {"from": "now-1h", "to": "now"},
+              "refresh": "30s",
+              "schemaVersion": 39,
+              "version": 1
+            },
+            "overwrite": true
+          }
+          K8SDASHEOF
+          
+          # 3. Create Application Performance dashboard
+          cat > app_dashboard.json << APPDASHEOF
+          {
+            "dashboard": {
+              "id": null,
+              "title": "Portfolio Application Performance",
+              "tags": ["portfolio", "application", "performance"],
               "timezone": "browser",
               "panels": [
                 {
@@ -149,65 +287,113 @@ jobs:
                   "type": "stat",
                   "targets": [
                     {
-                      "expr": "up{job=~\"portfolio-.*|prometheus\"}",
+                      "expr": "up{job=~\".*service.*\"}",
                       "refId": "A",
-                      "datasource": {
-                        "type": "prometheus",
-                        "uid": "${DATASOURCE_UID}"
-                      }
+                      "datasource": {"type": "prometheus", "uid": "${DATASOURCE_UID}"},
+                      "legendFormat": "{{job}}"
                     }
                   ],
-                  "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}
+                  "gridPos": {"h": 6, "w": 8, "x": 0, "y": 0},
+                  "fieldConfig": {
+                    "defaults": {
+                      "color": {"mode": "thresholds"},
+                      "thresholds": {
+                        "steps": [
+                          {"color": "red", "value": null},
+                          {"color": "green", "value": 1}
+                        ]
+                      }
+                    }
+                  }
                 },
                 {
                   "id": 2,
-                  "title": "HTTP Requests Rate",
+                  "title": "Prometheus Query Duration",
                   "type": "timeseries",
                   "targets": [
                     {
-                      "expr": "rate(prometheus_http_requests_total[5m])",
+                      "expr": "prometheus_engine_query_duration_seconds",
                       "refId": "A",
-                      "datasource": {
-                        "type": "prometheus",
-                        "uid": "${DATASOURCE_UID}"
-                      }
+                      "datasource": {"type": "prometheus", "uid": "${DATASOURCE_UID}"},
+                      "legendFormat": "{{quantile}}"
                     }
                   ],
-                  "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
+                  "gridPos": {"h": 6, "w": 16, "x": 8, "y": 0}
+                },
+                {
+                  "id": 3,
+                  "title": "TSDB Head Series",
+                  "type": "timeseries",
+                  "targets": [
+                    {
+                      "expr": "prometheus_tsdb_head_series",
+                      "refId": "A",
+                      "datasource": {"type": "prometheus", "uid": "${DATASOURCE_UID}"},
+                      "legendFormat": "Head Series"
+                    }
+                  ],
+                  "gridPos": {"h": 8, "w": 12, "x": 0, "y": 6}
+                },
+                {
+                  "id": 4,
+                  "title": "Config Reload Success",
+                  "type": "stat",
+                  "targets": [
+                    {
+                      "expr": "prometheus_config_last_reload_successful",
+                      "refId": "A",
+                      "datasource": {"type": "prometheus", "uid": "${DATASOURCE_UID}"}
+                    }
+                  ],
+                  "gridPos": {"h": 8, "w": 12, "x": 12, "y": 6}
                 }
               ],
               "time": {"from": "now-1h", "to": "now"},
               "refresh": "30s",
               "schemaVersion": 39,
-              "version": 0
+              "version": 1
             },
             "overwrite": true
           }
-          DASHEOF
+          APPDASHEOF
           
-          # Create dashboard
-          DASHBOARD_RESPONSE=$(curl -s -X POST \
+          # Create dashboards
+          echo "📊 Creating Kubernetes dashboard..."
+          K8S_RESPONSE=$(curl -s -X POST \
             -H "Authorization: Bearer ${GRAFANA_API_KEY}" \
             -H "Content-Type: application/json" \
-            -d @dashboard.json \
+            -d @k8s_dashboard.json \
             "${GRAFANA_URL}/api/dashboards/db")
           
-          echo "📊 Dashboard response: ${DASHBOARD_RESPONSE}"
+          echo "📊 Creating Application dashboard..."
+          APP_RESPONSE=$(curl -s -X POST \
+            -H "Authorization: Bearer ${GRAFANA_API_KEY}" \
+            -H "Content-Type: application/json" \
+            -d @app_dashboard.json \
+            "${GRAFANA_URL}/api/dashboards/db")
           
-          DASHBOARD_URL=$(echo "${DASHBOARD_RESPONSE}" | grep -o '"url":"[^"]*"' | cut -d'"' -f4 | head -1)
-          if [ -n "${DASHBOARD_URL}" ]; then
-              echo "✅ Portfolio Dashboard created successfully!"
-              echo "🔗 Dashboard URL: ${GRAFANA_URL}${DASHBOARD_URL}"
-          fi
+          echo "K8s Dashboard: ${K8S_RESPONSE}"
+          echo "App Dashboard: ${APP_RESPONSE}"
           
-          echo "🎉 Grafana setup completed!"
+          # Extract dashboard URLs
+          K8S_URL=$(echo "${K8S_RESPONSE}" | grep -o '"url":"[^"]*"' | cut -d'"' -f4 | head -1)
+          APP_URL=$(echo "${APP_RESPONSE}" | grep -o '"url":"[^"]*"' | cut -d'"' -f4 | head -1)
           
-          # Configure AWS and send notification
+          echo "✅ Dashboards created successfully!"
+          echo "🔗 Kubernetes Dashboard: ${GRAFANA_URL}${K8S_URL}"
+          echo "🔗 Application Dashboard: ${GRAFANA_URL}${APP_URL}"
+          
+          # Test Prometheus connection
+          echo "🧪 Testing Prometheus connection..."
+          PROM_TEST=$(curl -s "${PROMETHEUS_URL}/api/v1/targets" | head -200)
+          echo "Prometheus targets: ${PROM_TEST}"
+          
+          # Configure AWS and send detailed notification
           export AWS_ACCESS_KEY_ID="${{ secrets.AWS_ACCESS_KEY_ID }}"
           export AWS_SECRET_ACCESS_KEY="${{ secrets.AWS_SECRET_ACCESS_KEY }}"
           export AWS_DEFAULT_REGION="${{ secrets.AWS_REGION }}"
           
-          # Create success notification payload
+          # Create detailed success notification payload
           cat > success_payload.json << SUCCESSEOF
           {
             "repository": "${{ github.repository }}",
@@ -217,23 +403,29 @@ jobs:
             "workflow_run_id": "${{ github.run_id }}",
             "actor": "${{ github.actor }}",
             "prometheus_url": "${PROMETHEUS_URL}",
+            "skooner_url": "http://${PUBLIC_IP}:${SKOONER_NODEPORT}",
+            "skooner_token": "${SKOONER_TOKEN}",
             "public_ip": "${PUBLIC_IP}",
-            "grafana_url": "${GRAFANA_URL}"
+            "grafana_url": "${GRAFANA_URL}",
+            "k8s_dashboard": "${GRAFANA_URL}${K8S_URL}",
+            "app_dashboard": "${GRAFANA_URL}${APP_URL}",
+            "message": "Portfolio deployed successfully with monitoring dashboards!"
           }
           SUCCESSEOF
           
           # Send success notification
+          echo "📧 Sending success notification..."
           aws lambda invoke \
             --function-name portfolio-notification-lambda \
             --payload file://success_payload.json \
             --cli-binary-format raw-in-base64-out \
-            success_response.json || echo "Lambda notification failed"
+            success_response.json || echo "Lambda notification failed - check Lambda function"
           
           echo "✅ Success notification sent"
           [ -f success_response.json ] && cat success_response.json
           
           # Cleanup temporary files
-          rm -f datasource.json dashboard.json success_payload.json success_response.json
+          rm -f datasource.json k8s_dashboard.json app_dashboard.json success_payload.json success_response.json
 
     # Configure AWS credentials (fallback)
     - name: Configure AWS credentials
@@ -256,7 +448,8 @@ jobs:
           "branch": "${{ github.ref_name }}",
           "build_status": "failure",
           "workflow_run_id": "${{ github.run_id }}",
-          "actor": "${{ github.actor }}"
+          "actor": "${{ github.actor }}",
+          "message": "Portfolio deployment failed! Check GitHub Actions logs."
         }
         EOF
         
