@@ -62,34 +62,50 @@ jobs:
     - name: Send Success Notification
       if: success()
       run: |
+        # Create payload file to avoid base64 encoding issues
+        cat > payload.json << EOF
+        {
+          "repository": "${{ github.repository }}",
+          "commit_sha": "${{ github.sha }}",
+          "branch": "${{ github.ref_name }}",
+          "build_status": "success",
+          "workflow_run_id": "${{ github.run_id }}",
+          "actor": "${{ github.actor }}"
+        }
+        EOF
+        
+        # Invoke Lambda with file payload
         aws lambda invoke \
           --function-name portfolio-notification-lambda \
-          --payload '{
-            "repository": "${{ github.repository }}",
-            "commit_sha": "${{ github.sha }}",
-            "branch": "${{ github.ref_name }}",
-            "build_status": "success",
-            "workflow_run_id": "${{ github.run_id }}",
-            "actor": "${{ github.actor }}"
-          }' \
-          --output text \
+          --payload file://payload.json \
+          --cli-binary-format raw-in-base64-out \
           response.json
+        
         echo "Success notification sent via Lambda"
+        cat response.json
 
     # Send failure notification via Lambda (if any step fails)
     - name: Send Failure Notification
       if: failure()
       run: |
+        # Create payload file to avoid base64 encoding issues
+        cat > payload.json << EOF
+        {
+          "repository": "${{ github.repository }}",
+          "commit_sha": "${{ github.sha }}",
+          "branch": "${{ github.ref_name }}",
+          "build_status": "failure",
+          "workflow_run_id": "${{ github.run_id }}",
+          "actor": "${{ github.actor }}"
+        }
+        EOF
+        
+        # Invoke Lambda with file payload
         aws lambda invoke \
           --function-name portfolio-notification-lambda \
-          --payload '{
-            "repository": "${{ github.repository }}",
-            "commit_sha": "${{ github.sha }}",
-            "branch": "${{ github.ref_name }}",
-            "build_status": "failure",
-            "workflow_run_id": "${{ github.run_id }}",
-            "actor": "${{ github.actor }}"
-          }' \
-          --output text \
+          --payload file://payload.json \
+          --cli-binary-format raw-in-base64-out \
           response.json
+        
         echo "Failure notification sent via Lambda"
+        cat response.json
