@@ -8,6 +8,8 @@ data:
     global:
       scrape_interval: 15s
       evaluation_interval: 15s
+      external_labels:
+        source: 'portfolio-monitoring'
     
     scrape_configs:
       - job_name: 'prometheus'
@@ -19,7 +21,7 @@ data:
         - role: endpoints
         scheme: https
         tls_config:
-          ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+          insecure_skip_verify: true  # Bypass certificate validation
         bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
         relabel_configs:
         - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
@@ -31,7 +33,7 @@ data:
         - role: node
         scheme: https
         tls_config:
-          ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+          insecure_skip_verify: true  # Bypass certificate validation
         bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
         relabel_configs:
         - action: labelmap
@@ -83,3 +85,31 @@ data:
         - source_labels: [__meta_kubernetes_service_name]
           action: replace
           target_label: kubernetes_service_name
+      
+      # New job for monitoring namespace services
+      - job_name: 'monitoring-services'
+        kubernetes_sd_configs:
+        - role: service
+        relabel_configs:
+        - source_labels: [__meta_kubernetes_namespace]
+          action: keep
+          regex: monitoring
+        - action: labelmap
+          regex: __meta_kubernetes_service_label_(.+)
+        - source_labels: [__meta_kubernetes_service_name]
+          action: replace
+          target_label: service
+      
+      # New job for skooner namespace
+      - job_name: 'skooner-services'
+        kubernetes_sd_configs:
+        - role: service
+        relabel_configs:
+        - source_labels: [__meta_kubernetes_namespace]
+          action: keep
+          regex: skooner
+        - action: labelmap
+          regex: __meta_kubernetes_service_label_(.+)
+        - source_labels: [__meta_kubernetes_service_name]
+          action: replace
+          target_label: service

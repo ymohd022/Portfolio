@@ -8,7 +8,7 @@ metadata:
 spec:
   type: NodePort
   ports:
-  - port: 4654
+  - port: 80
     targetPort: 4654
     nodePort: 30123
     protocol: TCP
