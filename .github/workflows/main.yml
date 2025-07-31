@@ -20,16 +20,21 @@ jobs:
       run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
     - name: Build & Push Frontend
+      id: build-frontend
       run: |
         docker build -t ${{ secrets.DOCKER_USERNAME }}/portfolio-frontend:latest ./Portfolio-Mohd_Yousuf
         docker push ${{ secrets.DOCKER_USERNAME }}/portfolio-frontend:latest
+        echo "Frontend build completed successfully"
 
     - name: Build & Push Backend
+      id: build-backend
       run: |
         docker build -t ${{ secrets.DOCKER_USERNAME }}/portfolio-backend:latest ./Backend
         docker push ${{ secrets.DOCKER_USERNAME }}/portfolio-backend:latest
+        echo "Backend build completed successfully"
 
     - name: Deploy to EC2 Minikube
+      id: deploy-k8s
       uses: appleboy/ssh-action@v1.0.0
       with:
         host: ${{ secrets.EC2_HOST }}
@@ -43,46 +48,48 @@ jobs:
           kubectl apply -f frontend-service.yaml
           kubectl apply -f backend-deployment.yaml
           kubectl apply -f backend-service.yaml
-          
-    - name: Send success notification
+          echo "Kubernetes deployment completed successfully"
+
+    # Configure AWS credentials for Lambda invocation
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
+
+    # Send success notification via Lambda
+    - name: Send Success Notification
       if: success()
       run: |
-        # Install dependencies
-        sudo apt-get update
-        sudo apt-get install -y curl jq
-    
-        # Prepare data
-        DATA=$(jq -n \
-          --arg repo "${{ github.repository }}" \
-          --arg workflow "${{ github.workflow }}" \
-          --arg commit "${{ github.sha }}" \
-          --arg run_id "${{ github.run_id }}" \
-          --arg branch "${{ github.ref_name }}" \
-          --arg timestamp "${{ github.event.head_commit.timestamp }}" \
-          '{
-           repo: $repo,
-           workflow: $workflow,
-           commit: $commit,
-           run_id: $run_id,
-           branch: $branch,
-           timestamp: $timestamp
-         }')
-    
-         # Send request
-         response=$(curl -i -s -X POST \
-            -H "Content-Type: application/json" \
-            -H "Authorization: ${{ secrets.NOTIFY_SECRET }}" \
-            -d "$DATA" \
-            "${{ secrets.LAMBDA_ENDPOINT }}")
-    
-         echo "Full response:"
-         echo "$response"
-    
-        http_status=$(echo "$response" | grep HTTP | awk '{print $2}')
-        echo "Response status: $http_status"
-    
-        if [ "$http_status" != "200" ]; then
-          echo "::error::Notification failed with status $http_status"
-          exit 1
-        fi
+        aws lambda invoke \
+          --function-name portfolio-notification-lambda \
+          --payload '{
+            "repository": "${{ github.repository }}",
+            "commit_sha": "${{ github.sha }}",
+            "branch": "${{ github.ref_name }}",
+            "build_status": "success",
+            "workflow_run_id": "${{ github.run_id }}",
+            "actor": "${{ github.actor }}"
+          }' \
+          --output text \
+          response.json
+        echo "Success notification sent via Lambda"
 
+    # Send failure notification via Lambda (if any step fails)
+    - name: Send Failure Notification
+      if: failure()
+      run: |
+        aws lambda invoke \
+          --function-name portfolio-notification-lambda \
+          --payload '{
+            "repository": "${{ github.repository }}",
+            "commit_sha": "${{ github.sha }}",
+            "branch": "${{ github.ref_name }}",
+            "build_status": "failure",
+            "workflow_run_id": "${{ github.run_id }}",
+            "actor": "${{ github.actor }}"
+          }' \
+          --output text \
+          response.json
+        echo "Failure notification sent via Lambda"
