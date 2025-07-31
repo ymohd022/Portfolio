@@ -10,7 +10,7 @@ spec:
   ports:
   - port: 4654
     targetPort: 4654
-    nodePort: 30001
+    nodePort: 30123
     protocol: TCP
     name: http
   selector:
