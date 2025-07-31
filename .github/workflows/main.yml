@@ -74,7 +74,7 @@ jobs:
           
           # Get service information
           PROMETHEUS_NODEPORT=$(kubectl get svc prometheus-service -n monitoring -o jsonpath='{.spec.ports[0].nodePort}' 2>/dev/null || echo "30000")
-          SKOONER_NODEPORT=$(kubectl get svc skooner-service -n skooner -o jsonpath='{.spec.ports[0].nodePort}' 2>/dev/null || echo "30001")
+          SKOONER_NODEPORT=$(kubectl get svc skooner-service -n skooner -o jsonpath='{.spec.ports[0].nodePort}' 2>/dev/null || echo "30123")
           PUBLIC_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
           
           # Generate access tokens
