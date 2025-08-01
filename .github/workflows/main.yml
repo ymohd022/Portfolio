@@ -49,31 +49,9 @@ jobs:
           # Deploy portfolio applications
           kubectl apply -f frontend-deployment.yaml
           kubectl apply -f frontend-service.yaml
-          kubectl apply -f frontend-hpa.yaml
           kubectl apply -f backend-deployment.yaml
           kubectl apply -f backend-service.yaml
           echo "Portfolio applications deployed successfully"
-           echo "🔍 Verifying HPA configuration..."
-          sleep 30  # Wait for metrics to populate
-          
-          HPA_STATUS=$(kubectl get hpa frontend-hpa -o jsonpath='{.status.conditions[?(@.type=="AbleToScale")].status}' 2>/dev/null || echo "NotFound")
-          if [ "$HPA_STATUS" = "True" ]; then
-            echo "✅ HPA is configured and working"
-          else
-            echo "⚠️ HPA may need more time to initialize"
-          fi
-          
-          # Get HPA status
-          kubectl get hpa || echo "HPA not ready yet"
-          
-          # Check metrics server
-          METRICS_READY=$(kubectl get deployment metrics-server -n kube-system -o jsonpath='{.status.readyReplicas}' 2>/dev/null || echo "0")
-          if [ "$METRICS_READY" -gt "0" ]; then
-            echo "✅ Metrics server is running"
-          else
-            echo "⚠️ Installing/checking metrics server..."
-            # For minikube
-            minikube addons enable metrics-server || true
           
           # Deploy Prometheus monitoring
           echo "🚀 Setting up Prometheus monitoring..."
